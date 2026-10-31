@@ -128,6 +128,7 @@ function createTile(character, index, color) {
 
 function createCollections() {
   const container = el("collections");
+  let number = 0; // 画面に並ぶ順番で通し番号を付けます。
   groups.forEach(([type, color]) => {
     const list = characters.filter((c) => c.type === type);
     if (!list.length) return;
@@ -148,7 +149,7 @@ function createCollections() {
 
     const grid = document.createElement("div");
     grid.className = "grid";
-    list.forEach((c) => grid.append(createTile(c, characters.indexOf(c), color)));
+    list.forEach((c) => grid.append(createTile(c, number++, color)));
     section.append(heading, grid);
     container.append(section);
   });
@@ -230,7 +231,7 @@ function selectTile(character, tile) {
   selected = character.name;
   el("hintPanel").hidden = false;
   el("hintTarget").textContent = "選択中：" + character.type + "属性の「？」（" +
-    String(characters.indexOf(character) + 1).padStart(2, "0") + "番）";
+    tile.querySelector(".index").textContent + "番）";
   el("hintOutput").textContent = "種族・職業・配置・実装日から選べます。";
   updateScreen();
 }
@@ -315,18 +316,16 @@ async function shareResult() {
     solved.size + "/" + characters.length + "人 正解（" +
     Math.round(solved.size / characters.length * 100) +
     "%）\n" + window.location.href;
-  if (navigator.share) {
-    try { await navigator.share({ text }); } catch (_) {}
-  } else if (navigator.clipboard && navigator.clipboard.writeText) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
     try {
       await navigator.clipboard.writeText(text);
-      notify("結果をクリップボードにコピーしました。");
+      notify("結果テキストをコピーしました。");
+      return;
     } catch (_) {
-      window.prompt("結果をコピーしてください", text);
+      // コピーできないブラウザでは手動コピーを案内します。
     }
-  } else {
-    window.prompt("結果をコピーしてください", text);
   }
+  window.prompt("結果テキストをコピーしてください", text);
 }
 
 createCollections();
