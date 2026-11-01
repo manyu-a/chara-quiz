@@ -44,12 +44,44 @@
   const tileMap = new Map();
   const countryCounters = new Map();
 
-  // NFKCで全角/半角を合わせ、ひらがな・カタカナ・記号の違いを吸収する。
-  // あいまいな部分一致は使わない。F-4EとF-4EJなどは別車両として判定する。
+  // 「三号」「三式」「三二型」などの漢数字を 3号・3式・32型に統一。
+  const kanjiDigits = {
+    "〇": 0, "零": 0, "一": 1, "二": 2, "三": 3, "四": 4,
+    "五": 5, "六": 6, "七": 7, "八": 8, "九": 9
+  };
+  function normalizeKanjiNumber(text) {
+    if (!/[十百千]/.test(text)) {
+      return [...text].map((c) => kanjiDigits[c]).join("");
+    }
+    let total = 0;
+    let current = 0;
+    for (const c of text) {
+      if (c in kanjiDigits) {
+        current = current * 10 + kanjiDigits[c];
+      } else {
+        const unit = { "十": 10, "百": 100, "千": 1000 }[c];
+        total += (current || 1) * unit;
+        current = 0;
+      }
+    }
+    return String(total + current);
+  }
+
+  // Unicodeの「Ⅲ」はNFKCで「III」になる。ローマ数字I～XXも3などに統一。
+  const romanNumbers = {
+    i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8,
+    ix: 9, x: 10, xi: 11, xii: 12, xiii: 13, xiv: 14, xv: 15,
+    xvi: 16, xvii: 17, xviii: 18, xix: 19, xx: 20
+  };
+
+  // 表記揺れのみ吸収し、部分一致にはしない（F-4EとF-4EJは別扱い）。
   function normalizeName(value) {
     return String(value).normalize("NFKC").toLowerCase()
-      // ひらがな・カタカナの入力差も吸収する。
       .replace(/[ぁ-ゖ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 96))
+      .replace(/[〇零一二三四五六七八九十百千]+/g, normalizeKanjiNumber)
+      .replace(/(^|[^a-z0-9])([ivxlcdm]+)(?=$|[^a-z0-9])/g,
+        (whole, before, roman) => before + (romanNumbers[roman] || roman))
+      // 括弧・空白・ハイフン・点・飾り記号などをすべて無視。
       .replace(/[^\p{L}\p{N}]/gu, "");
   }
 
