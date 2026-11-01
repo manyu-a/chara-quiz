@@ -6,7 +6,7 @@ HTML / CSS / JavaScript の静的サイトです。依存ライブラリやビ�
 
 ## データ
 
-- `vehicles.js`: ゲーム版 **2.59.0.94** の通常研究ツリー用スナップショット
+- `vehicles.js`: ゲーム版 **2.59.0.94** の通常研究ツリー用スナップショット。翻訳CSV内の文字列 `\t` は削除して表示・入力判定に使用
 - `update_data.py`: [War Thunder Datamine](https://github.com/gszabi99/War-Thunder-Datamine) を参照してデータを再生成する標準ライブラリのみの Python スクリプト
 - 同じ国・内部IDに重複が生じないよう抽出し、プレミアム・イベント・所持者限定の列は除外
 - 空の航空機には空RB、ヘリには陸RB、陸・海にはそれぞれのRBを使用
