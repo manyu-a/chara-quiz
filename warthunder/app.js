@@ -233,7 +233,11 @@
     const next = vehicles.filter((v) => matchesScope(v, chosen));
     if (!next.length) { notify("条件に合う車両がありません。"); return; }
 
-    stopClock();
+    // 条件切り替え前に旧クイズの進捗と最終経過時間を保存する。
+    if (scope) {
+      stopClock();
+      saveProgress();
+    }
     scope = chosen;
     active = next;
     const state = readJSON(progressKey()) || {};
