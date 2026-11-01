@@ -34,7 +34,29 @@
     it_zsu_23_4: ["ZSU-23-4"],
     il_zsu_23_4: ["ZSU-23-4"],
     // Bardelas は車両系列名だが、現状該当車両が1台のみなので短縮名も許容。
-    il_m113_hvms: ["Bardelas", "バルデラス"]
+    il_m113_hvms: ["Bardelas", "バルデラス"],
+    // ゲーム全体の型式名を調査し、系列名のみで一意な車両に限った短縮回答。
+    germ_flakpanzer_zerstorer_45: ["Zerstörer","ツェルシュテーラー"],
+    germ_begleitpanzer_57: ["Begleitpanzer"],
+    fr_vextra_105: ["Vextra"],
+    uk_a17_mk_1_tetrarch: ["Tetrarch","テトラーク"],
+    uk_a25_mk_8: ["Harry Hopkins","ハリー・ホプキンス"],
+    brigand_b1: ["Brigand","ブリガンド"],
+    blenheim_mkiv: ["Blenheim","ブレニム"],
+    beaufort_mkviii: ["Beaufort","ボーフォート"],
+    v_156_b1: ["Chesapeake","チェサピーク"],
+    firebrand_tf4: ["Firebrand","ファイアブランド"],
+    gladiator_mk2_navy: ["Sea Gladiator","シーグラディエーター"],
+    meteor_fmk3_navy: ["Sea Meteor","シーミーティア"],
+    sea_venom_faw20: ["Sea Venom","シーベノム"],
+    javelin_fmk9: ["Javelin","ジャベリン"],
+    wessex_mk5: ["Wessex","ウェセックス"],
+    it_mc492_baleno: ["Baleno","バレーノ"],
+    germ_radpanzer_90: ["Radkampfwagen"],
+    uk_arjun_mk1: ["Arjun","アージュン"],
+    sw_lago_1: ["Lago","ラーゴ"],
+    il_sabra_mk1: ["Sabra","サブラ"],
+    sagittario_2: ["Sagittario","サジッタリオ"]
   };
   const allBRs = [...new Set(vehicles.map((vehicle) => vehicle.br))]
     .sort((a, b) => a - b);
