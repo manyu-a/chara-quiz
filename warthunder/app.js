@@ -262,19 +262,24 @@
     if (!$("resultPanel").hidden) drawResult();
   }
 
-  function startQuiz() {
+  function startQuiz(reset = false) {
     const chosen = currentScope();
     const next = vehicles.filter((v) => matchesScope(v, chosen));
     if (!next.length) { notify("条件に合う車両がありません。"); return; }
 
-    // 条件切り替え前に旧クイズの進捗と最終経過時間を保存する。
+    // リセット時に消した記録を再保存しない。同じ条件の記録だけを破棄する。
     if (scope) {
       stopClock();
-      saveProgress();
+      const sameScope = scope.country === chosen.country && scope.mode === chosen.mode &&
+        scope.min === chosen.min && scope.max === chosen.max;
+      if (!reset || !sameScope) saveProgress();
     }
     scope = chosen;
     active = next;
-    const state = readJSON(progressKey()) || {};
+    if (reset) {
+      try { localStorage.removeItem(progressKey()); } catch (_) {}
+    }
+    const state = reset ? {} : (readJSON(progressKey()) || {});
     const validIds = new Set(active.map((v) => v.id));
     solved = new Set((Array.isArray(state.solved) ? state.solved : [])
       .filter((id) => validIds.has(id)));
@@ -459,7 +464,7 @@
     if (Number($("brMax").value) < Number($("brMin").value)) $("brMin").value = $("brMax").value;
     updatePreview();
   });
-  $("apply").addEventListener("click", startQuiz);
+  $("apply").addEventListener("click", () => startQuiz());
   $("answerForm").addEventListener("submit", submitAnswer);
   $("hintToggle").addEventListener("click", () => {
     $("hintPanel").hidden = !$("hintPanel").hidden;
@@ -475,8 +480,7 @@
   $("giveUp").addEventListener("click", giveUp);
   $("restart").addEventListener("click", () => {
     if (!window.confirm("この条件の回答記録を消して最初からやり直しますか？")) return;
-    try { localStorage.removeItem(progressKey()); } catch (_) {}
-    startQuiz();
+    startQuiz(true);
   });
   $("downloadResult").addEventListener("click", () => {
     drawResult();
