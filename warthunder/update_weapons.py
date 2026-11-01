@@ -73,6 +73,43 @@ def equipped_weapons(model_data):
     return weapons
 
 
+def configurable_guns(model_data):
+    """通常装備欄に火器がない航空機の、初期装備や選択可能な火器を調べる。
+    これらは固定武装と断定せず、ヒントでは「武装例」と明記する。
+    """
+    if model_data["kind"] not in ("air", "heli"):
+        return []
+
+    # 一部の機体は初期プリセットに砲の配置（tier）だけが指定される。
+    if model_data["presets"]:
+        config = model_data["presets"][0].get("weaponConfig") or {}
+        result = []
+        for weapon in as_list(config.get("Weapon")):
+            path = weapon.get("blk", "")
+            name = path.rsplit("/", 1)[-1].lower()
+            if not path or not ("cannon" in name or "gun" in name) or "rocket" in name:
+                continue
+            count = max(1, round(len(as_list(weapon.get("tier"))) *
+                                 weapon.get("amountPerTier", 1)))
+            result.extend([{"blk": path}] * count)
+        if result:
+            return result
+
+    # 装備スロット上の機銃・機関砲。同じスロットの複数選択肢は重複計上しない。
+    result = []
+    for slot in as_list(model_data["slots"].get("WeaponSlot")):
+        if not slot.get("notUseforDisbalanceCalculation"):
+            continue
+        for preset in as_list(slot.get("WeaponPreset")):
+            guns = [w for w in as_list(preset.get("Weapon"))
+                    if w.get("trigger") in ("cannon", "machine gun", "additional gun")
+                    and not w.get("external") and w.get("blk")]
+            if guns:
+                result.extend(guns)
+                break
+    return result
+
+
 def caliber_from_name(path):
     match = CALIBER.search(path)
     if not match:
@@ -161,6 +198,19 @@ def hint(vehicle, model_data, extra_calibers):
         }[kind]
         return prefix + "：" + "・".join(entries)
 
+    # 固定火器がない場合も、装備スロットから得られる砲は参考ヒントにできる。
+    if kind in ("air", "heli") and not entries:
+        option = [caliber_from_name(w["blk"]) or extra_calibers.get(w["blk"])
+                  for w in configurable_guns(model_data)]
+        counts = Counter(n for n in option if n)
+        if counts:
+            examples = []
+            for caliber, count in sorted(counts.items(), reverse=True)[:3]:
+                size = printable_caliber(caliber) + "mm"
+                size += "機銃" if caliber < 15 else "機関砲" if caliber < 40 else "砲"
+                examples.append(size + ("×" + str(count) if count > 1 else ""))
+            return "武装例（装備構成による）：" + "・".join(examples)
+
     if kind == "ground" and ("_fcs" in unit_id or
                              any("launcher" in p.get("name", "").lower() for p in model_data["presets"])):
         return "武装：ミサイル発射システム"
@@ -173,7 +223,8 @@ def generate(ref, vehicles, version):
     with ThreadPoolExecutor(max_workers=24) as pool:
         data = dict(pool.map(lambda vehicle: model(ref, vehicle), vehicles))
     # 銃の識別子に口径がない場合だけ、固有の弾薬定義を読み取る。
-    paths = {w.get("blk") for item in data.values() for w in equipped_weapons(item)
+    paths = {w.get("blk") for item in data.values()
+             for w in equipped_weapons(item) + configurable_guns(item)
              if isinstance(w, dict) and w.get("blk")}
     nonnumeric = sorted(p for p in paths if not caliber_from_name(p) and
                         "dummy_weapon" not in p.lower() and
