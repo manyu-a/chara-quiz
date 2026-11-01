@@ -8,9 +8,9 @@
     return;
   }
 
-  // vehicles.js の1件: [内部ID, 国, 分類, RB, 英語の正式名, 日本語の正式名]
-  const vehicles = catalog.vehicles.map(([id, country, kind, br, name, ja]) =>
-    ({ id, country, kind, br, name, ja: ja || name })
+  // vehicles.js の1件: [内部ID, 国, 兵種, RB, 英語名, 日本語名, 車両種別]
+  const vehicles = catalog.vehicles.map(([id, country, kind, br, name, ja, role]) =>
+    ({ id, country, kind, br, name, ja: ja || name, role: role || "不明" })
   );
   const countries = {
     usa: "アメリカ", germany: "ドイツ", ussr: "ソ連",
@@ -41,6 +41,7 @@
   let started = false;
   let onlyUnsolved = false;
   let selected = null;
+  let hintStage = 0;
   const tileMap = new Map();
   const countryCounters = new Map();
 
@@ -258,7 +259,8 @@
     $("answer").disabled = ended || !active.length;
     $("answerForm").querySelector("button").disabled = ended || !active.length;
     $("giveUp").disabled = ended || !active.length;
-    $("hintFirst").disabled = ended;
+    $("hintType").disabled = ended || !selected;
+    $("hintFirst").disabled = ended || !selected || hintStage < 1;
     if (!$("resultPanel").hidden) drawResult();
   }
 
@@ -291,6 +293,7 @@
     clockStarted = Date.now();
     if (solved.size === active.length) { ended = true; running = false; }
     selected = null;
+    hintStage = 0;
     onlyUnsolved = false;
 
     writeJSON(settingsKey, chosen);
@@ -330,6 +333,7 @@
     startClock();
     fresh.forEach((v) => solved.add(v.id));
     selected = null;
+    hintStage = 0;
     $("answer").value = "";
     notify("正解！ " + fresh[0].ja +
       (fresh.length > 1 ? " ほか " + (fresh.length - 1) + "台" : "") +
@@ -348,22 +352,33 @@
   function selectTile(vehicle) {
     if (ended || solved.has(vehicle.id)) return;
     selected = vehicle.id;
+    hintStage = 0;
     $("hintPanel").hidden = false;
     $("hintToggle").classList.add("active");
     $("hintTarget").textContent = countries[vehicle.country] + " · " +
       kindNames[vehicle.kind] + " · BR " + brText(vehicle.br) + " の「？」を選択中";
-    $("hintOutput").textContent = "先頭1文字を見る場合はボタンを押してください。";
+    $("hintOutput").textContent = "ヒント1から順番に開示できます。";
+    updateScreen();
+  }
+
+  function showTypeHint() {
+    const vehicle = active.find((v) => v.id === selected);
+    if (!vehicle || ended || solved.has(vehicle.id)) return;
+    startClock();
+    hintStage = Math.max(hintStage, 1);
+    $("hintOutput").textContent = "ヒント1： " + vehicle.role +
+      (hintStage === 2 ? " / ヒント2： " + Array.from(vehicle.ja)[0] : "");
+    saveProgress();
     updateScreen();
   }
 
   function showHint() {
     const vehicle = active.find((v) => v.id === selected);
-    if (!vehicle || ended || solved.has(vehicle.id)) {
-      $("hintOutput").textContent = "先に未回答の「？」を選んでください。";
-      return;
-    }
+    if (!vehicle || ended || solved.has(vehicle.id) || hintStage < 1) return;
     startClock();
-    $("hintOutput").textContent = "日本語名の先頭：" + Array.from(vehicle.ja)[0];
+    hintStage = 2;
+    $("hintOutput").textContent = "ヒント1： " + vehicle.role +
+      " / ヒント2： " + Array.from(vehicle.ja)[0];
     saveProgress();
     updateScreen();
   }
@@ -374,6 +389,7 @@
     ended = true;
     gaveUp = true;
     selected = null;
+    hintStage = 0;
     saveProgress();
     updateScreen();
     notify("結果：" + solved.size + " / " + active.length + "台");
@@ -470,6 +486,7 @@
     $("hintPanel").hidden = !$("hintPanel").hidden;
     $("hintToggle").classList.toggle("active", !$("hintPanel").hidden);
   });
+  $("hintType").addEventListener("click", showTypeHint);
   $("hintFirst").addEventListener("click", showHint);
   $("onlyUnsolved").addEventListener("click", () => {
     onlyUnsolved = !onlyUnsolved;
