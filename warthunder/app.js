@@ -44,10 +44,12 @@
   const tileMap = new Map();
   const countryCounters = new Map();
 
-  // NFKCで全角/半角を合わせ、ハイフン・点・括弧・空白等の記号をすべて無視する。
+  // NFKCで全角/半角を合わせ、ひらがな・カタカナ・記号の違いを吸収する。
   // あいまいな部分一致は使わない。F-4EとF-4EJなどは別車両として判定する。
   function normalizeName(value) {
     return String(value).normalize("NFKC").toLowerCase()
+      // ひらがな・カタカナの入力差も吸収する。
+      .replace(/[ぁ-ゖ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 96))
       .replace(/[^\p{L}\p{N}]/gu, "");
   }
 
@@ -150,7 +152,7 @@
     image.addEventListener("error", () => tile.classList.add("image-failed"));
     const name = document.createElement("span");
     name.className = "tile-name";
-    name.textContent = vehicle.name;
+    name.textContent = vehicle.ja;
     const kind = document.createElement("span");
     kind.className = "tile-kind";
     kind.textContent = kindNames[vehicle.kind];
@@ -202,10 +204,10 @@
       nodes.tile.classList.toggle("filtered", onlyUnsolved && correct);
       nodes.tile.classList.toggle("selected", selected === v.id && !ended && !correct);
       nodes.tile.setAttribute("aria-label", correct || revealed
-        ? v.name : "未回答 " + countries[v.country] + " " + kindNames[v.kind] +
+        ? v.ja : "未回答 " + countries[v.country] + " " + kindNames[v.kind] +
           " BR " + brText(v.br));
       if ((correct || revealed) && !nodes.image.getAttribute("src")) {
-        nodes.image.alt = v.name;
+        nodes.image.alt = v.ja;
         nodes.image.src = "https://wtvehiclesapi.duckdns.org/assets/techtrees/" +
           encodeURIComponent(v.id) + ".png";
       }
@@ -292,7 +294,7 @@
     fresh.forEach((v) => solved.add(v.id));
     selected = null;
     $("answer").value = "";
-    notify("正解！ " + fresh[0].name +
+    notify("正解！ " + fresh[0].ja +
       (fresh.length > 1 ? " ほか " + (fresh.length - 1) + "台" : "") +
       "（" + solved.size + " / " + active.length + "）");
 
@@ -324,7 +326,7 @@
       return;
     }
     startClock();
-    $("hintOutput").textContent = "英語名の先頭：" + Array.from(vehicle.name)[0];
+    $("hintOutput").textContent = "日本語名の先頭：" + Array.from(vehicle.ja)[0];
     saveProgress();
     updateScreen();
   }
