@@ -8,9 +8,15 @@
     return;
   }
 
+  // 武装ヒントは同じデータマイン版の別ファイルから読み込む。
+  const weaponData = window.WT_WEAPON_HINTS;
+  const weaponHints = weaponData?.version === catalog.version && weaponData?.ref === catalog.ref
+    ? weaponData.hints : {};
+
   // vehicles.js の1件: [内部ID, 国, 兵種, RB, 英語名, 日本語名, 車両種別]
   const vehicles = catalog.vehicles.map(([id, country, kind, br, name, ja, role]) =>
-    ({ id, country, kind, br, name, ja: ja || name, role: role || "不明" })
+    ({ id, country, kind, br, name, ja: ja || name, role: role || "不明",
+       weapon: weaponHints?.[id] || "武装データ未取得" })
   );
   const countries = {
     usa: "アメリカ", germany: "ドイツ", ussr: "ソ連",
@@ -306,7 +312,8 @@
     $("answerForm").querySelector("button").disabled = ended || !active.length;
     $("giveUp").disabled = ended || !active.length;
     $("hintType").disabled = ended || !selected;
-    $("hintFirst").disabled = ended || !selected || hintStage < 1;
+    $("hintWeapon").disabled = ended || !selected || hintStage < 1;
+    $("hintFirst").disabled = ended || !selected || hintStage < 2;
     if (!$("resultPanel").hidden) drawResult();
   }
 
@@ -403,24 +410,15 @@
     updateScreen();
   }
 
-  function showTypeHint() {
+  function revealHint(stage) {
     const vehicle = active.find((v) => v.id === selected);
-    if (!vehicle || ended || solved.has(vehicle.id)) return;
+    if (!vehicle || ended || solved.has(vehicle.id) || stage > hintStage + 1) return;
     startClock();
-    hintStage = Math.max(hintStage, 1);
-    $("hintOutput").textContent = "ヒント1： " + vehicle.role +
-      (hintStage === 2 ? " / ヒント2： " + Array.from(vehicle.ja)[0] : "");
-    saveProgress();
-    updateScreen();
-  }
-
-  function showHint() {
-    const vehicle = active.find((v) => v.id === selected);
-    if (!vehicle || ended || solved.has(vehicle.id) || hintStage < 1) return;
-    startClock();
-    hintStage = 2;
-    $("hintOutput").textContent = "ヒント1： " + vehicle.role +
-      " / ヒント2： " + Array.from(vehicle.ja)[0];
+    hintStage = Math.max(hintStage, stage);
+    const lines = ["ヒント1： " + vehicle.role];
+    if (hintStage >= 2) lines.push("ヒント2： " + vehicle.weapon);
+    if (hintStage >= 3) lines.push("ヒント3： 名前の先頭「" + Array.from(vehicle.ja)[0] + "」");
+    $("hintOutput").textContent = lines.join("\n");
     saveProgress();
     updateScreen();
   }
@@ -528,8 +526,9 @@
     $("hintPanel").hidden = !$("hintPanel").hidden;
     $("hintToggle").classList.toggle("active", !$("hintPanel").hidden);
   });
-  $("hintType").addEventListener("click", showTypeHint);
-  $("hintFirst").addEventListener("click", showHint);
+  $("hintType").addEventListener("click", () => revealHint(1));
+  $("hintWeapon").addEventListener("click", () => revealHint(2));
+  $("hintFirst").addEventListener("click", () => revealHint(3));
   $("onlyUnsolved").addEventListener("click", () => {
     onlyUnsolved = !onlyUnsolved;
     updateScreen();
