@@ -70,11 +70,11 @@
       </div>
 
       <form id="answerForm">
-        <input id="answer" type="text" placeholder="車両の正式名称を入力" aria-label="車両名を回答" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <input id="answer" type="text" placeholder="車両の日本語名を入力" aria-label="車両名を回答" autocomplete="off" autocapitalize="off" spellcheck="false">
         <button class="primary" type="submit">回答</button>
       </form>
       <p id="message" class="message" role="status">車両名を入力してください。</p>
-      <p class="footnote">英語名・日本語名に対応。ハイフン、スペース、括弧、ピリオドなどの記号は省略できます。同名車両はまとめて正解になります。</p>
+      <p class="footnote">日本語名で入力できます（英語名でも正解）。ハイフン、スペース、括弧、ピリオドなどの記号は省略できます。同名車両はまとめて正解になります。</p>
 
       <div class="tools">
         <button id="hintToggle" type="button">ヒント</button>
@@ -87,7 +87,7 @@
       <div id="hintPanel" class="subpanel" hidden>
         <strong>ヒント</strong>
         <p id="hintTarget">下の「？」マスを選んでください。</p>
-        <button id="hintFirst" type="button">英語名の先頭1文字を見る</button>
+        <button id="hintFirst" type="button">日本語名の先頭1文字を見る</button>
         <p id="hintOutput" class="message"></p>
       </div>
       <div id="resultPanel" class="subpanel" hidden>
