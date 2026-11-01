@@ -64,6 +64,15 @@ ROLE_TAGS = {
 }
 
 
+# この4件は元の翻訳と一致する場合に限り補正。将来の公式修正を上書きしない。
+JAPANESE_NAME_FIXES = {
+    "it_9a33bm3": ("オサーAK", "オサーAKM"),
+    "beaufighter_mk6c": ("ボーファイター Mk.Vlc", "ボーファイター Mk.VIc"),
+    "spitfire_mk5c": ("スピットファイア Mk.Vc", "スピットファイア Mk.Vc/trop"),
+    "cn_zts_63_1980": ("63式水陸両用戦車", "63式水陸両用戦車（1980）"),
+}
+
+
 def vehicle_role(unittags, unit_id, kind):
     tags = unittags.get(unit_id, {}).get("tags", {})
     for tag, label in ROLE_TAGS[kind]:
@@ -153,6 +162,9 @@ def generate(ref=DEFAULT_REF):
                     seen.add((country, group, uid))
                     br = round(1 + rank / 3, 1)
                     english, japanese = label
+                    fix = JAPANESE_NAME_FIXES.get(uid)
+                    if fix and japanese == fix[0]:
+                        japanese = fix[1]
                     vehicles.append([uid, country, kind, br, english,
                                      japanese if japanese != english else "",
                                      vehicle_role(unittags, uid, kind)])
