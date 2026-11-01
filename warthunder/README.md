@@ -51,3 +51,8 @@ python warthunder/update_data.py <公開ライブ版のコミットSHA>
 - 日本語名の誤記等4件を補正：イタリアOsa-AKMの末尾M、Beaufighter Mk VIcのI/l、Spitfire Mk Vc/tropのtrop区別、ZTS63の1980年型区別。
 - これらの補正は生成スクリプトの `JAPANESE_NAME_FIXES` にも記録し、データ更新時に同じ旧表記が残る場合だけ補正する。
 - 「Osa-AK」と「Osa-AKM」など型式が異なるものは同一視しない。メーカー名・愛称による別名追加は見送り。
+
+## 欧文アクセント・個別の短縮名（2026-11-02）
+
+- 回答比較では欧文のアクセント記号を無視。`AMX-50 Surbaissé` を `AMX-50 Surbaisse` でも正解にする。日本語の濁点は維持する。
+- `Bardelas/60mm HVMS`（イスラエル）のみ、`Bardelas` と `バルデラス` を個別の正解別名として許容する。一般の `/` 以降の削除は行わない。
