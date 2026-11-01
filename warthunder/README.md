@@ -56,3 +56,10 @@ python warthunder/update_data.py <公開ライブ版のコミットSHA>
 
 - 回答比較では欧文のアクセント記号を無視。`AMX-50 Surbaissé` を `AMX-50 Surbaisse` でも正解にする。日本語の濁点は維持する。
 - `Bardelas/60mm HVMS`（イスラエル）のみ、`Bardelas` と `バルデラス` を個別の正解別名として許容する。一般の `/` 以降の削除は行わない。
+
+## 一意な車両系列名の短縮回答（2026-11-02）
+
+- 現行のゲーム版2.59.0.94の研究・プレミアム・イベントなど、ショップ登録車両3,303件を横断調査。別型式がない21車両のみ、番号やMkなどを省略した系列名を `answerAliases` に追加。
+- 対象：Zerstörer 45、Begleitpanzer 57、Vextra 105、Tetrarch I、Harry Hopkins I、Brigand B 1、Blenheim Mk IV、Beaufort Mk VIII、Chesapeake Mk I、Firebrand TF Mk IV、Sea Gladiator Mk I、Sea Meteor F Mk 3、Sea Venom FAW 20、Javelin Mk.9、Wessex HU Mk.5、Baleno MC-492、Radkampfwagen 90、Arjun Mk 1、Lago I、Sabra Mk.I、Sagittario 2。
+- 省略後に別型式がある Swordfish、Attacker、Sea Hawk、Whirlwind、Jagdpanther、Ram、Zrinyi、同名イベント車両のある Super Mystere は対象外。正式名表示・出題数・保存キーは変更しない。
+- 今後のデータ更新では、短縮回答と新規登場した別型式の名称の重複を再確認すること。
