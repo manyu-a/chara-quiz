@@ -32,7 +32,9 @@
   const answerAliases = {
     ussr_zsu_23_4: ["ZSU-23-4"],
     it_zsu_23_4: ["ZSU-23-4"],
-    il_zsu_23_4: ["ZSU-23-4"]
+    il_zsu_23_4: ["ZSU-23-4"],
+    // Bardelas は車両系列名だが、現状該当車両が1台のみなので短縮名も許容。
+    il_m113_hvms: ["Bardelas", "バルデラス"]
   };
   const allBRs = [...new Set(vehicles.map((vehicle) => vehicle.br))]
     .sort((a, b) => a - b);
@@ -84,7 +86,9 @@
 
   // 表記揺れのみ吸収し、部分一致にはしない（F-4EとF-4EJは別扱い）。
   function normalizeName(value) {
-    return String(value).normalize("NFKC").toLowerCase()
+    // 欧文のアクセントを無視する。和文の濁点(U+3099/309A)は消さない。
+    return String(value).normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+      .normalize("NFKC").toLowerCase()
       .replace(/[ぁ-ゖ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 96))
       // よくある音写の違いだけを統一する。型式や愛称は省略しない。
       .replace(/ビッカース/g, "ヴィッカース")
