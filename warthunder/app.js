@@ -27,6 +27,13 @@
   };
   const settingsKey = "wt-vehicle-quiz-settings-v1";
   const progressPrefix = "wt-vehicle-quiz-v1-" + catalog.version + ":";
+
+  // 過去の公式名称など、型式を取り違えない範囲で個別に許容する別名。
+  const answerAliases = {
+    ussr_zsu_23_4: ["ZSU-23-4"],
+    it_zsu_23_4: ["ZSU-23-4"],
+    il_zsu_23_4: ["ZSU-23-4"]
+  };
   const allBRs = [...new Set(vehicles.map((vehicle) => vehicle.br))]
     .sort((a, b) => a - b);
 
@@ -79,11 +86,19 @@
   function normalizeName(value) {
     return String(value).normalize("NFKC").toLowerCase()
       .replace(/[ぁ-ゖ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 96))
+      // 同じメーカー名の日本語表記揺れだけを吸収する。
+      .replace(/ビッカース/g, "ヴィッカース")
       .replace(/[〇零一二三四五六七八九十百千]+/g, normalizeKanjiNumber)
       .replace(/(^|[^a-z0-9])([ivxlcdm]+)(?=$|[^a-z0-9])/g,
         (whole, before, roman) => before + (romanNumbers[roman] || roman))
       // 括弧・空白・ハイフン・点・飾り記号などをすべて無視。
       .replace(/[^\p{L}\p{N}]/gu, "");
+  }
+
+  function isAnswer(vehicle, normalized) {
+    return normalizeName(vehicle.name) === normalized ||
+      normalizeName(vehicle.ja) === normalized ||
+      (answerAliases[vehicle.id] || []).some((alias) => normalizeName(alias) === normalized);
   }
 
   function brText(value) { return Number(value).toFixed(1); }
@@ -316,13 +331,9 @@
     const value = normalizeName(raw);
     if (!value) return;
 
-    const matches = active.filter((v) =>
-      normalizeName(v.name) === value || normalizeName(v.ja) === value
-    );
+    const matches = active.filter((v) => isAnswer(v, value));
     if (!matches.length) {
-      const elsewhere = vehicles.some((v) =>
-        normalizeName(v.name) === value || normalizeName(v.ja) === value
-      );
+      const elsewhere = vehicles.some((v) => isAnswer(v, value));
       notify(elsewhere
         ? "登録されている名前ですが、現在の出題条件には含まれません。"
         : "該当する車両がありません。表記を確認してください。");
