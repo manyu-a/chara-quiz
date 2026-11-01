@@ -21,6 +21,57 @@ SECTIONS = {
 }
 
 
+# ゲームの unittags.blkx の type_* タグを日本語の車両種別に変換する。
+# 先頭から一致を探す（1台に複数タグがある場合もある）。
+ROLE_TAGS = {
+    "ground": [
+        ("type_light_tank", "軽戦車"),
+        ("type_medium_tank", "中戦車"),
+        ("type_heavy_tank", "重戦車"),
+        ("type_tank_destroyer", "駆逐戦車"),
+        ("type_spaa", "対空車両"),
+        ("type_missile_tank", "対戦車ミサイル車両"),
+    ],
+    "air": [
+        ("type_fighter", "戦闘機"),
+        ("type_assault", "攻撃機"),
+        ("type_bomber", "爆撃機"),
+    ],
+    "heli": [
+        ("type_attack_helicopter", "攻撃ヘリ"),
+        ("type_utility_helicopter", "汎用ヘリ"),
+    ],
+    "bluewater": [
+        ("type_battlecruiser", "巡洋戦艦"),
+        ("type_battleship", "戦艦"),
+        ("type_heavy_cruiser", "重巡洋艦"),
+        ("type_light_cruiser", "軽巡洋艦"),
+        ("type_frigate", "フリゲート"),
+        ("type_destroyer", "駆逐艦"),
+    ],
+    "coastal": [
+        ("type_torpedo_gun_boat", "魚雷砲艇"),
+        ("type_torpedo_boat", "魚雷艇"),
+        ("type_submarine_chaser", "駆潜艇"),
+        ("type_armored_boat", "装甲艇"),
+        ("type_heavy_gun_boat", "大型砲艇"),
+        ("type_gun_boat", "砲艇"),
+        ("type_frigate", "フリゲート"),
+        ("type_naval_aa_ferry", "対空艀"),
+        ("type_naval_ferry_barge", "砲艀"),
+        ("type_boat", "小型艇"),
+    ],
+}
+
+
+def vehicle_role(unittags, unit_id, kind):
+    tags = unittags.get(unit_id, {}).get("tags", {})
+    for tag, label in ROLE_TAGS[kind]:
+        if tags.get(tag):
+            return label
+    raise ValueError(f"種別タグを判定できない車両: {unit_id} ({kind})")
+
+
 def download(ref, path):
     req = Request(SOURCE + ref + "/" + path, headers={"User-Agent": "WTQuizDataUpdater/1.0"})
     with urlopen(req, timeout=90) as response:
@@ -52,6 +103,7 @@ def generate(ref=DEFAULT_REF):
     root = "char.vromfs.bin_u/config/"
     shop = json.loads(download(ref, root + "shop.blkx"))
     economy = json.loads(download(ref, root + "wpcost.blkx"))
+    unittags = json.loads(download(ref, root + "unittags.blkx"))
     version = download(ref, "version").decode().strip()
 
     rows = csv.reader(io.StringIO(download(ref, "lang.vromfs.bin_u/lang/units.csv").decode("utf-8-sig")), delimiter=";")
@@ -102,7 +154,8 @@ def generate(ref=DEFAULT_REF):
                     br = round(1 + rank / 3, 1)
                     english, japanese = label
                     vehicles.append([uid, country, kind, br, english,
-                                     japanese if japanese != english else ""])
+                                     japanese if japanese != english else "",
+                                     vehicle_role(unittags, uid, kind)])
 
     nations = ["usa", "germany", "ussr", "britain", "japan",
                "china", "italy", "france", "sweden", "israel"]
