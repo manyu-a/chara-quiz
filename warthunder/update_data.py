@@ -42,6 +42,9 @@ def clean_name(name):
     name = (name or "").replace("\u00a0", " ").strip()
     # 国家マーカー・装飾記号・ゲーム専用フォントの文字を先頭から削る
     name = re.sub(r"^[^\w]+", "", name)
+    # ゲームの翻訳CSVには、タブ位置を表す文字列 "\\t" がそのまま入っている。
+    # 車両名には区切りとして不要なので、文字列と実際のタブの両方を削除する。
+    name = name.replace(r"\t", "").replace("\t", "")
     return re.sub(r"\s+", " ", name)
 
 
