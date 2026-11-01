@@ -66,11 +66,17 @@ def generate(ref=DEFAULT_REF):
                 continue
             for line in block.get("range", []):
                 items = list(tree_units(line))
-                # 通常研究列は先頭に連続。末尾のプレミアム/イベント列は
-                # 購入SLが0の車両が主体で、イベント指定も多い。
-                paid_with_sl = sum(economy.get(uid, {}).get("value", 0) > 0 for uid, _ in items)
-                events = sum("gift" in item or "event" in item for _, item in items)
-                if not items or paid_with_sl / len(items) < 0.58 or events > 1:
+                # 通常研究列は先頭に連続。プレミアム・イベント列が始まったら終了。
+                # ランクIの無料予備車両は通常研究列として数える。
+                def regular_entry(uid, item):
+                    if any(item.get(flag) for flag in ("gift", "event", "showOnlyWhenBought",
+                                                     "showOnlyWhenAvailableForPurchase")):
+                        return False
+                    price = economy.get(uid, {}).get("value", 0)
+                    return price > 0 or (price == 0 and item.get("rank") == 1)
+
+                regular_count = sum(regular_entry(uid, item) for uid, item in items)
+                if not items or regular_count / len(items) < 0.8:
                     break
 
                 for uid, item in items:
