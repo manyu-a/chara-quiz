@@ -86,8 +86,13 @@
   function normalizeName(value) {
     return String(value).normalize("NFKC").toLowerCase()
       .replace(/[ぁ-ゖ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 96))
-      // 同じメーカー名の日本語表記揺れだけを吸収する。
+      // よくある音写の違いだけを統一する。型式や愛称は省略しない。
       .replace(/ビッカース/g, "ヴィッカース")
+      .replace(/ジャギュア|ジャグア|ヤグアル/g, "ジャガー")
+      .replace(/バンパイア/g, "ヴァンパイア")
+      .replace(/ゲパード/g, "ゲパルト")
+      .replace(/トルネード/g, "トーネード")
+      .replace(/レオパルド/g, "レオパルト")
       .replace(/[〇零一二三四五六七八九十百千]+/g, normalizeKanjiNumber)
       .replace(/(^|[^a-z0-9])([ivxlcdm]+)(?=$|[^a-z0-9])/g,
         (whole, before, roman) => before + (romanNumbers[roman] || roman))
