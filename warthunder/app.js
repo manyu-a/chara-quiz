@@ -80,6 +80,9 @@
   let onlyUnsolved = false;
   let selected = null;
   let hintStage = 0;
+  let hintLanguage = "en";
+  let hintPosition = 0;
+  const letterHints = new Map(); // 車両ID → 確定済みの { lang, index }
   const tileMap = new Map();
   const countryCounters = new Map();
 
@@ -192,7 +195,8 @@
       elapsed: elapsedMs(),
       started,
       ended,
-      gaveUp
+      gaveUp,
+      letterHints: [...letterHints]
     });
   }
 
@@ -315,7 +319,7 @@
     $("hintType").disabled = ended || !selected;
     $("hintWeapon").disabled = ended || !selected || hintStage < 1;
     $("hintMask").disabled = ended || !selected || hintStage < 2;
-    $("hintFirst").disabled = ended || !selected || hintStage < 3;
+    $("hintReveal").disabled = ended || !selected || hintStage < 3;
     if (!$("resultPanel").hidden) drawResult();
   }
 
@@ -340,6 +344,17 @@
     const validIds = new Set(active.map((v) => v.id));
     solved = new Set((Array.isArray(state.solved) ? state.solved : [])
       .filter((id) => validIds.has(id)));
+    letterHints.clear();
+    const nextById = new Map(active.map((v) => [v.id, v]));
+    for (const [id, choice] of (Array.isArray(state.letterHints) ? state.letterHints : [])) {
+      const vehicle = nextById.get(id);
+      if (!vehicle || !choice || !["ja", "en"].includes(choice.lang) ||
+          !Number.isInteger(choice.index) || choice.index < 0) continue;
+      const name = choice.lang === "ja" ? vehicle.jaOriginal : vehicle.name;
+      if (name && choice.index < nameMaskParts(name).filter((p) => p.selectable).length) {
+        letterHints.set(id, { lang: choice.lang, index: choice.index });
+      }
+    }
     ended = Boolean(state.ended);
     gaveUp = Boolean(state.gaveUp);
     elapsedBefore = Number.isFinite(state.elapsed) && state.elapsed > 0 ? state.elapsed : 0;
@@ -350,6 +365,8 @@
     selected = null;
     hintStage = 0;
     onlyUnsolved = false;
+    $("hintNames").hidden = true;
+    $("hintLetterPicker").hidden = true;
 
     writeJSON(settingsKey, chosen);
     buildCollection();
@@ -385,6 +402,7 @@
     fresh.forEach((v) => solved.add(v.id));
     selected = null;
     hintStage = 0;
+    $("hintLetterPicker").hidden = true;
     $("answer").value = "";
     notify("正解！ " + fresh[0].ja +
       (fresh.length > 1 ? " ほか " + (fresh.length - 1) + "台" : "") +
@@ -404,6 +422,10 @@
     if (ended || solved.has(vehicle.id)) return;
     selected = vehicle.id;
     hintStage = 0;
+    hintLanguage = vehicle.jaOriginal ? "ja" : "en";
+    hintPosition = 0;
+    $("hintNames").hidden = true;
+    $("hintLetterPicker").hidden = true;
     $("hintPanel").hidden = false;
     $("hintToggle").classList.add("active");
     $("hintTarget").textContent = countries[vehicle.country] + " · " +
@@ -412,42 +434,152 @@
     updateScreen();
   }
 
-  // 名前の形だけを残す。NFCで「Ⅲ」などのローマ数字1文字表記を維持する。
-  function maskName(name) {
+  // 名称マスクと元の文字を1対1に保持する。ローマ数字だけは複数文字でも1か所。
+  function nameMaskParts(name) {
     const source = String(name).normalize("NFC");
-    // 英字のI/V/Xから成る独立したローマ数字と、Unicodeのローマ数字記号を一括して◇にする。
-    // I-16 / V-990のような型式先頭の英字はローマ数字として扱わない。
-    const romanMasked = source.replace(
-      /[\u2160-\u2188]+|(?<![A-Za-z0-9])(?:[IVX]+)(?![A-Za-z0-9])/gu,
-      (part, index) => index === 0 && /^-\d/u.test(source.slice(part.length)) ? part : "◇"
-    );
-    return Array.from(romanMasked, (char) => {
-      if (char === "◇") return char;
-      if (/\p{Nd}/u.test(char)) return "□";
-      if (/[\p{L}\p{M}\p{Nl}]/u.test(char)) return "○";
-      return char;
-    }).join("");
+    const parts = [];
+    function addPlain(text) {
+      for (const char of Array.from(text)) {
+        const mask = /\p{Nd}/u.test(char) ? "□"
+          : /[\p{L}\p{M}\p{Nl}]/u.test(char) ? "○" : char;
+        parts.push({ mask, original: char, selectable: mask === "○" || mask === "□" });
+      }
+    }
+    const roman = /[\u2160-\u2188]+|(?<![A-Za-z0-9])(?:[IVX]+)(?![A-Za-z0-9])/gu;
+    let end = 0;
+    for (const match of source.matchAll(roman)) {
+      addPlain(source.slice(end, match.index));
+      // I-16やV-990の先頭はローマ数字ではなく型式記号。
+      if (match.index === 0 && /^-\d/u.test(source.slice(match.index + match[0].length))) {
+        addPlain(match[0]);
+      } else {
+        parts.push({ mask: "◇", original: match[0], selectable: true });
+      }
+      end = match.index + match[0].length;
+    }
+    addPlain(source.slice(end));
+    return parts;
+  }
+
+  function hintName(vehicle, lang) {
+    return lang === "ja" ? vehicle.jaOriginal : vehicle.name;
+  }
+
+  // セレクターでは空白・括弧・ハイフンを数えず、○□◇だけを左から数える。
+  function updateHintPositions(vehicle) {
+    const parts = nameMaskParts(hintName(vehicle, hintLanguage))
+      .filter((part) => part.selectable);
+    const select = $("hintLetterPosition");
+    select.replaceChildren();
+    parts.forEach((part, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = (index + 1) + "番目（" + part.mask + "）";
+      select.append(option);
+    });
+    hintPosition = Math.min(hintPosition, Math.max(0, parts.length - 1));
+    select.value = String(hintPosition);
+  }
+
+  function prepareLetterPicker(vehicle) {
+    const chosen = letterHints.get(vehicle.id);
+    hintLanguage = chosen?.lang || (vehicle.jaOriginal ? "ja" : "en");
+    hintPosition = chosen?.index ?? 0;
+    const language = $("hintLetterLanguage");
+    language.replaceChildren();
+    for (const [code, label, name] of [
+      ["ja", "日本語", vehicle.jaOriginal], ["en", "英語", vehicle.name]
+    ]) {
+      if (!name) continue;
+      const option = document.createElement("option");
+      option.value = code;
+      option.textContent = label;
+      language.append(option);
+    }
+    language.value = hintLanguage;
+    updateHintPositions(vehicle);
+  }
+
+  function renderHintNames(vehicle) {
+    const names = $("hintNames");
+    names.replaceChildren();
+    names.hidden = hintStage < 3;
+    $("hintLetterPicker").hidden = hintStage < 4;
+    if (hintStage < 3) return;
+
+    const revealed = letterHints.get(vehicle.id);
+    for (const [lang, label] of [["ja", "日本語："], ["en", "英語："]]) {
+      const name = hintName(vehicle, lang);
+      if (!name) continue;
+      const line = document.createElement("div");
+      line.className = "hint-name-row";
+      const nameLabel = document.createElement("span");
+      nameLabel.className = "hint-name-label";
+      nameLabel.textContent = label;
+      const masked = document.createElement("span");
+      masked.className = "hint-name-text";
+      let index = 0;
+      for (const part of nameMaskParts(name)) {
+        if (!part.selectable) {
+          masked.append(document.createTextNode(part.mask));
+          continue;
+        }
+        const character = document.createElement("span");
+        const position = index++;
+        const isRevealed = revealed?.lang === lang && revealed.index === position;
+        const isPreview = hintStage >= 4 && !revealed &&
+          hintLanguage === lang && hintPosition === position;
+        character.textContent = isRevealed ? part.original : part.mask;
+        if (isPreview) character.className = "hint-char-preview";
+        if (isRevealed) character.className = "hint-char-revealed";
+        masked.append(character);
+      }
+      line.append(nameLabel, masked);
+      names.append(line);
+    }
+    if (hintStage >= 4) {
+      const locked = Boolean(revealed);
+      $("hintLetterLanguage").disabled = locked || ended;
+      $("hintLetterPosition").disabled = locked || ended;
+      $("hintLetterConfirm").disabled = locked || ended;
+      $("hintLetterStatus").textContent = locked
+        ? "この車両の1か所を公開済みです。追加の公開はできません。"
+        : "赤く強調された位置を確認し、「この文字を公開」を押してください。";
+    }
+  }
+
+  function confirmLetterHint() {
+    const vehicle = active.find((v) => v.id === selected);
+    if (!vehicle || ended || solved.has(vehicle.id) || hintStage < 4 ||
+        letterHints.has(vehicle.id)) return;
+    const parts = nameMaskParts(hintName(vehicle, hintLanguage))
+      .filter((part) => part.selectable);
+    if (!parts[hintPosition]) return;
+    letterHints.set(vehicle.id, { lang: hintLanguage, index: hintPosition });
+    renderHintNames(vehicle);
+    saveProgress();
   }
 
   function revealHint(stage) {
     const vehicle = active.find((v) => v.id === selected);
     if (!vehicle || ended || solved.has(vehicle.id) || stage > hintStage + 1) return;
     startClock();
+    const before = hintStage;
     hintStage = Math.max(hintStage, stage);
     const lines = ["ヒント1： " + vehicle.role];
     if (hintStage >= 2) lines.push("ヒント2： " + vehicle.weapon);
     if (hintStage >= 3) {
       lines.push("ヒント3： 名称の形");
       lines.push("凡例：○＝文字1文字／□＝数字1桁／◇＝ローマ数字（ひとまとまり）");
-      if (vehicle.jaOriginal) lines.push("日本語： " + maskName(vehicle.jaOriginal));
-      lines.push("英語： " + maskName(vehicle.name));
-    }
-    if (hintStage >= 4) {
-      lines.push("ヒント4： 名前の先頭「" + Array.from(vehicle.ja)[0] + "」");
     }
     $("hintOutput").textContent = lines.join("\n");
+    if (hintStage >= 4 && before < 4) prepareLetterPicker(vehicle);
+    renderHintNames(vehicle);
     saveProgress();
     updateScreen();
+    if (hintStage >= 4 && before < 4 && !letterHints.has(vehicle.id)) {
+      $("hintLetterPosition").focus();
+    }
   }
 
   function giveUp() {
@@ -457,6 +589,7 @@
     gaveUp = true;
     selected = null;
     hintStage = 0;
+    $("hintLetterPicker").hidden = true;
     saveProgress();
     updateScreen();
     notify("結果：" + solved.size + " / " + active.length + "台");
@@ -556,7 +689,22 @@
   $("hintType").addEventListener("click", () => revealHint(1));
   $("hintWeapon").addEventListener("click", () => revealHint(2));
   $("hintMask").addEventListener("click", () => revealHint(3));
-  $("hintFirst").addEventListener("click", () => revealHint(4));
+  $("hintReveal").addEventListener("click", () => revealHint(4));
+  $("hintLetterLanguage").addEventListener("change", () => {
+    const vehicle = active.find((v) => v.id === selected);
+    if (!vehicle || hintStage < 4 || letterHints.has(vehicle.id)) return;
+    hintLanguage = $("hintLetterLanguage").value;
+    hintPosition = 0;
+    updateHintPositions(vehicle);
+    renderHintNames(vehicle);
+  });
+  $("hintLetterPosition").addEventListener("change", () => {
+    const vehicle = active.find((v) => v.id === selected);
+    if (!vehicle || hintStage < 4 || letterHints.has(vehicle.id)) return;
+    hintPosition = Number($("hintLetterPosition").value);
+    renderHintNames(vehicle);
+  });
+  $("hintLetterConfirm").addEventListener("click", confirmLetterHint);
   $("onlyUnsolved").addEventListener("click", () => {
     onlyUnsolved = !onlyUnsolved;
     updateScreen();
