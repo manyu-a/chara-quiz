@@ -13,10 +13,11 @@
   const weaponHints = weaponData?.version === catalog.version && weaponData?.ref === catalog.ref
     ? weaponData.hints : {};
 
+  // 日本語名の有無を保持し、英語名だけの車両でマスクを重複表示しない。
   // vehicles.js の1件: [内部ID, 国, 兵種, RB, 英語名, 日本語名, 車両種別]
   const vehicles = catalog.vehicles.map(([id, country, kind, br, name, ja, role]) =>
-    ({ id, country, kind, br, name, ja: ja || name, role: role || "不明",
-       weapon: weaponHints?.[id] || "武装データ未取得" })
+    ({ id, country, kind, br, name, ja: ja || name, jaOriginal: ja || "",
+       role: role || "不明", weapon: weaponHints?.[id] || "武装データ未取得" })
   );
   const countries = {
     usa: "アメリカ", germany: "ドイツ", ussr: "ソ連",
@@ -313,7 +314,8 @@
     $("giveUp").disabled = ended || !active.length;
     $("hintType").disabled = ended || !selected;
     $("hintWeapon").disabled = ended || !selected || hintStage < 1;
-    $("hintFirst").disabled = ended || !selected || hintStage < 2;
+    $("hintMask").disabled = ended || !selected || hintStage < 2;
+    $("hintFirst").disabled = ended || !selected || hintStage < 3;
     if (!$("resultPanel").hidden) drawResult();
   }
 
@@ -410,6 +412,23 @@
     updateScreen();
   }
 
+  // 名前の形だけを残す。NFCで「Ⅲ」などのローマ数字1文字表記を維持する。
+  function maskName(name) {
+    const source = String(name).normalize("NFC");
+    // 英字のI/V/Xから成る独立したローマ数字と、Unicodeのローマ数字記号を一括して◇にする。
+    // I-16 / V-990のような型式先頭の英字はローマ数字として扱わない。
+    const romanMasked = source.replace(
+      /[\u2160-\u2188]+|(?<![A-Za-z0-9])(?:[IVX]+)(?![A-Za-z0-9])/gu,
+      (part, index) => index === 0 && /^-\d/u.test(source.slice(part.length)) ? part : "◇"
+    );
+    return Array.from(romanMasked, (char) => {
+      if (char === "◇") return char;
+      if (/\p{Nd}/u.test(char)) return "□";
+      if (/[\p{L}\p{M}\p{Nl}]/u.test(char)) return "○";
+      return char;
+    }).join("");
+  }
+
   function revealHint(stage) {
     const vehicle = active.find((v) => v.id === selected);
     if (!vehicle || ended || solved.has(vehicle.id) || stage > hintStage + 1) return;
@@ -417,7 +436,14 @@
     hintStage = Math.max(hintStage, stage);
     const lines = ["ヒント1： " + vehicle.role];
     if (hintStage >= 2) lines.push("ヒント2： " + vehicle.weapon);
-    if (hintStage >= 3) lines.push("ヒント3： 名前の先頭「" + Array.from(vehicle.ja)[0] + "」");
+    if (hintStage >= 3) {
+      lines.push("ヒント3： 名称の形");
+      if (vehicle.jaOriginal) lines.push("日本語： " + maskName(vehicle.jaOriginal));
+      lines.push("英語： " + maskName(vehicle.name));
+    }
+    if (hintStage >= 4) {
+      lines.push("ヒント4： 名前の先頭「" + Array.from(vehicle.ja)[0] + "」");
+    }
     $("hintOutput").textContent = lines.join("\n");
     saveProgress();
     updateScreen();
@@ -528,7 +554,8 @@
   });
   $("hintType").addEventListener("click", () => revealHint(1));
   $("hintWeapon").addEventListener("click", () => revealHint(2));
-  $("hintFirst").addEventListener("click", () => revealHint(3));
+  $("hintMask").addEventListener("click", () => revealHint(3));
+  $("hintFirst").addEventListener("click", () => revealHint(4));
   $("onlyUnsolved").addEventListener("click", () => {
     onlyUnsolved = !onlyUnsolved;
     updateScreen();
