@@ -438,6 +438,7 @@
     if (hintStage >= 2) lines.push("ヒント2： " + vehicle.weapon);
     if (hintStage >= 3) {
       lines.push("ヒント3： 名称の形");
+      lines.push("凡例：○＝文字1文字／□＝数字1桁／◇＝ローマ数字（ひとまとまり）");
       if (vehicle.jaOriginal) lines.push("日本語： " + maskName(vehicle.jaOriginal));
       lines.push("英語： " + maskName(vehicle.name));
     }
