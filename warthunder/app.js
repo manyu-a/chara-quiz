@@ -636,7 +636,7 @@
     if (hintStage >= 1) lines.push("ヒント1： " + vehicle.role);
     if (hintStage >= 2) lines.push("ヒント2： " + vehicle.weapon);
     if (hintStage >= 3) {
-      lines.push("ヒント3： 名称の形");
+      lines.push("ヒント3： 文字数・構成");
       lines.push("凡例：○＝文字1文字／□＝数字1桁／◇＝ローマ数字（ひとまとまり）");
     }
     $("hintOutput").textContent = lines.length
