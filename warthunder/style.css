@@ -91,6 +91,18 @@ button.primary:hover:not(:disabled) { background: #edc17b; }
 .subpanel[hidden] { display: none; }
 .subpanel p { font-size: 13px; color: var(--muted); }
 #hintOutput { white-space: pre-line; line-height: 1.7; overflow-wrap: anywhere; }
+.hint-names { margin-top: 10px; }
+.hint-name-row { display: flex; align-items: flex-start; gap: 8px; margin-top: 5px; font-size: 14px; line-height: 1.9; color: #e3c18a; }
+.hint-name-label { flex: none; min-width: 56px; }
+.hint-name-text { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.hint-char-preview { color: #fff; background: #a63c40; outline: 2px solid #ef827b; border-radius: 3px; font-weight: 800; }
+.hint-char-revealed { color: #fff; background: #31634a; outline: 2px solid #65a47d; border-radius: 3px; font-weight: 800; }
+.hint-letter-picker { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--stroke); }
+.hint-letter-controls { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.hint-letter-controls label { display: grid; flex: 1; min-width: 140px; gap: 5px; font-size: 12px; color: var(--muted); }
+.hint-letter-controls button { min-height: 46px; }
+.hint-letter-picker p { margin-top: 8px; }
+
 .subpanel canvas { width: 100%; height: auto; display: block; margin-bottom: 12px; border-radius: 8px; }
 .collection-title { margin: 29px 2px 13px; color: var(--accent); letter-spacing: .12em; font-size: 13px; font-weight: 800; }
 .collection-title small { font-weight: normal; color: var(--muted); letter-spacing: 0; }
