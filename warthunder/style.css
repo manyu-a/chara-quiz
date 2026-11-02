@@ -90,7 +90,7 @@ button.primary:hover:not(:disabled) { background: #edc17b; }
 .subpanel { margin-top: 16px; padding: 16px; background: #121c2b; border: 1px solid var(--stroke); border-radius: 10px; }
 .subpanel[hidden] { display: none; }
 .subpanel p { font-size: 13px; color: var(--muted); }
-#hintOutput { white-space: pre-line; line-height: 1.7; }
+#hintOutput { white-space: pre-line; line-height: 1.7; overflow-wrap: anywhere; }
 .subpanel canvas { width: 100%; height: auto; display: block; margin-bottom: 12px; border-radius: 8px; }
 .collection-title { margin: 29px 2px 13px; color: var(--accent); letter-spacing: .12em; font-size: 13px; font-weight: 800; }
 .collection-title small { font-weight: normal; color: var(--muted); letter-spacing: 0; }
